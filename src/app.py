@@ -11,6 +11,10 @@ from api.models import db
 from api.routes import api
 from api.admin import setup_admin
 from api.commands import setup_commands
+from flask_jwt_extended import JWTManager
+from flask_bcrypt import Bcrypt
+
+
 
 #from models import Person
 
@@ -18,6 +22,12 @@ ENV = os.getenv("FLASK_ENV")
 static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../public/')
 app = Flask(__name__)
 app.url_map.strict_slashes = False
+
+# Configuracion de JWT
+app.config["JWT_SECRET_KEY"] = os.getenv("FLASK_APP_KEY")
+jwt = JWTManager(app)
+
+# Configuracion de BCrypt
 
 # database condiguration
 db_url = os.getenv("DATABASE_URL")
