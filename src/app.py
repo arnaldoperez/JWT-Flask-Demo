@@ -14,7 +14,8 @@ from api.commands import setup_commands
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 from api.app_routes.users import apiUser
-
+import firebase_admin
+from firebase_admin import credentials
 #from models import Person
 
 ENV = os.getenv("FLASK_ENV")
@@ -83,6 +84,8 @@ def serve_any_other_file(path):
     response.cache_control.max_age = 0 # avoid cache memory
     return response
 
+cred=credentials.Certificate("fb_credentials.json")
+firebase_admin.initialize_app(cred)
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':

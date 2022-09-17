@@ -4,38 +4,42 @@ import { Link } from "react-router-dom";
 import { Context } from "../store/appContext";
 
 export const Demo = () => {
-	const { store, actions } = useContext(Context);
+  const { store, actions } = useContext(Context);
 
-	return (
-		<div className="container">
-			<ul className="list-group">
-				{store.demo.map((item, index) => {
-					return (
-						<li
-							key={index}
-							className="list-group-item d-flex justify-content-between"
-							style={{ background: item.background }}>
-							<Link to={"/single/" + index}>
-								<span>Link to: {item.title}</span>
-							</Link>
-							{// Conditional render example
-							// Check to see if the background is orange, if so, display the message
-							item.background === "orange" ? (
-								<p style={{ color: item.initial }}>
-									Check store/flux.js scroll to the actions to see the code
-								</p>
-							) : null}
-							<button className="btn btn-success" onClick={() => actions.changeColor(index, "orange")}>
-								Change Color
-							</button>
-						</li>
-					);
-				})}
-			</ul>
-			<br />
-			<Link to="/">
-				<button className="btn btn-primary">Back home</button>
-			</Link>
-		</div>
-	);
+  const submitPhoto = async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    let url = process.env.BACKEND_URL;
+    let response = await fetch(url + "/api/uploadPhoto", {
+      body: formData,
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + store.token,
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+    console.log("Imagen cargada");
+  };
+
+  return (
+    <div className="container">
+      <div className="mb-3">
+        <img src={store.profilePic}></img>
+        <label htmlFor="formFile" className="form-label">
+          Default file input example
+        </label>
+        <form onSubmit={submitPhoto}>
+          <input
+            className="form-control"
+            type="file"
+            id="formFile"
+            name="profilePic"
+          ></input>
+          <button className="btn btn-primary" type="submit">
+            Enviar
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 };
