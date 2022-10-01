@@ -8,7 +8,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from flask_bcrypt import Bcrypt
 from datetime import date, time, datetime, timezone
 
-from api.app_routes import apiUser , apiProduct
+from api.app_routes import apiUser
 
 api = Blueprint('api', __name__)
 
@@ -16,7 +16,6 @@ app=Flask(__name__)
 bcrypt=Bcrypt(app)
 
 api.register_blueprint(apiUser)
-api.register_blueprint(apiProduct)
 
 @api.route('/hello', methods=['POST', 'GET'])
 def handle_hello():
@@ -26,18 +25,4 @@ def handle_hello():
 
     return jsonify(response_body), 200
 
-
-@api.route('/helloprotected', methods=['GET'])
-@jwt_required()
-def handle_hello_protected():
-    claims=get_jwt()
-    user = User.query.get(get_jwt_identity())
-    response_body = {
-        "message": "token válido",
-        "user_id": get_jwt_identity(),
-        "role":claims["role"],
-        "user_email": user.email
-    }
-
-    return jsonify(user.serialize()), 200
 

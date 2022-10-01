@@ -1,6 +1,6 @@
 from datetime import date, time, datetime, timezone, timedelta
 from api.models import db, User, TokenBlockedList
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import create_access_token, create_refresh_token,get_jti, jwt_required, get_jwt_identity, get_jwt
 from api.utils import generate_sitemap, APIException
 from flask_bcrypt import Bcrypt
 from flask import Flask, Blueprint, request, jsonify
@@ -15,7 +15,7 @@ apiUser = Blueprint('apiUser', __name__)
 
 @apiUser.route("/helloUser",methods=["GET"])
 def helloUser():
-    print("HelloUser")
+    
     return "Hello User", 200
 
 @apiUser.route('/login', methods=['POST'])
@@ -24,18 +24,20 @@ def login():
     password = request.json.get("password", None)
 
     user = User.query.filter_by(email=email).first()
-    print(password)
+    
     # Verificamos el nombre de usuario
     if user is None:
         return jsonify({"message":"Login failed"}), 401
     
     # Validar clave
-    print(user.password)
+    
     if not bcrypt.check_password_hash(user.password, password):
         return jsonify({"message":"Wrong password"}), 401
     
     access_token = create_access_token(identity=user.id,additional_claims={"role":"admin"})
-    return jsonify({"token":access_token})
+    access_token_jti=get_jti(access_token)
+    refresh_token=create_refresh_token(identity=user.id, additional_claims={"accessToken":access_token_jti,"role":"admin"})
+    return jsonify({"token":access_token, "refreshToken":refresh_token})
 
 @apiUser.route('/signup', methods=['POST'])
 def signup():
@@ -51,6 +53,28 @@ def signup():
         db.session.rollback()
         print(err)
         return jsonify({"message":"internal error"}), 500
+
+@apiUser.route('/refresh',methods=['POST'])
+@jwt_required(refresh=True)
+def refreshToken():
+    claims=get_jwt()
+    refreshToken = claims["jti"]
+    accessToken = claims["accessToken"]
+    role=claims['role']
+    now = datetime.now(timezone.utc)
+    id=get_jwt_identity()
+    accessTokenBlocked = TokenBlockedList(token=accessToken, created_at=now, email=get_jwt_identity())
+    refreshTokenBlocked = TokenBlockedList(token=refreshToken, created_at=now, email=get_jwt_identity())
+    db.session.add(accessTokenBlocked)
+    db.session.add(refreshTokenBlocked)
+    db.session.commit()
+    access_token = create_access_token(identity=id,additional_claims={"role":role})
+    access_token_jti=get_jti(access_token)
+    refresh_token=create_refresh_token(identity=id, additional_claims={"accessToken":access_token_jti, "role":role})
+    return jsonify({"token":access_token, "refreshToken":refresh_token})
+
+
+
 
 @apiUser.route('/uploadPhoto', methods=['POST'])
 @jwt_required()
@@ -84,6 +108,22 @@ def uploadPhoto():
     db.session.commit()
     
     return "Ok", 200
+
+
+@apiUser.route('/helloprotected', methods=['GET'])
+@jwt_required()
+def handle_hello_protected():
+    claims=get_jwt()
+    user = User.query.get(get_jwt_identity())
+    response_body = {
+        "message": "token válido",
+        "user_id": get_jwt_identity(),
+        "role":claims["role"],
+        "user_email": user.email
+    }
+
+    return jsonify(user.serialize()), 200
+
 
 @apiUser.route('/getPhoto', methods=['GET'])
 @jwt_required()
